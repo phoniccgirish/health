@@ -1,20 +1,47 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem("supabase.auth.token");
+    setUser(null);
+    navigate("/login");
+  };
 
   return (
     <>
-      {/* Navbar */}
       <nav className='fixed top-0 left-0 right-0 h-16 bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-600 text-white flex items-center justify-between px-6 shadow-lg backdrop-blur-lg z-50'>
-        {/* Logo */}
-        <h1 className='text-2xl font-extrabold tracking-wide cursor-pointer'>
+        <Link
+          to='/'
+          className='text-2xl font-extrabold tracking-wide cursor-pointer'
+        >
           Heathchef
-        </h1>
+        </Link>
 
         {/* Desktop Links */}
-        <div className='hidden md:flex space-x-8 font-medium'>
+        <div className='hidden md:flex items-center space-x-6 font-medium'>
           <Link to='/' className='hover:text-yellow-300 transition'>
             Home
           </Link>
@@ -27,9 +54,30 @@ export default function Navbar() {
           <Link to='/body' className='hover:text-yellow-300 transition'>
             3D View
           </Link>
-          <Link to='/login' className='hover:text-yellow-300 transition'>
-            Login
-          </Link>
+
+          {user ? (
+            <>
+              <span className='flex items-center space-x-2'>
+                <img
+                  src='https://via.placeholder.com/32'
+                  alt='Profile'
+                  className='rounded-full'
+                />
+                <span>{user.email}</span>
+              </span>
+
+              <button
+                onClick={handleLogout}
+                className='bg-red-500 px-3 py-1 rounded hover:bg-red-600'
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <Link to='/auth' className='hover:text-yellow-300 transition'>
+              Login / Sign Up
+            </Link>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -74,13 +122,36 @@ export default function Navbar() {
           >
             3D View
           </Link>
-          <Link
-            to='/login'
-            onClick={() => setOpen(false)}
-            className='hover:text-yellow-300'
-          >
-            Login
-          </Link>
+
+          {user ? (
+            <>
+              <span className='text-center'>
+                <img
+                  src='https://via.placeholder.com/32'
+                  alt='Profile'
+                  className='rounded-full mx-auto'
+                />
+                <div className='mt-2'>{user.email}</div>
+              </span>
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setOpen(false);
+                }}
+                className='bg-red-500 px-4 py-1 rounded hover:bg-red-600'
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <Link
+              to='/auth'
+              onClick={() => setOpen(false)}
+              className='hover:text-yellow-300'
+            >
+              Login / Sign Up
+            </Link>
+          )}
         </div>
       )}
     </>
