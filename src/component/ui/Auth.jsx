@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "../../lib/supabaseClient";  // Fix the relative path
+import { supabase } from "../../lib/supabaseClient"; // Ensure correct path
 import { useNavigate } from "react-router-dom";
 
 export default function Auth() {
@@ -32,26 +32,72 @@ export default function Auth() {
           "supabase.auth.token",
           JSON.stringify(data.session)
         );
-        setSuccessMessage(`Welcome, ${data.user.email}!`);
+        setSuccessMessage(`Welcome back, ${data.user.email}!`);
         navigate("/");
       }
     } else {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      // Check if user already exists
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("email")
+        .eq("email", email)
+        .single();
 
-      if (error) {
-        console.error("Sign up error:", error);
-        setErrorMessage(error.message);
+      if (existingUser) {
+        // If user already exists, attempt login
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          console.error("Login after signup attempt error:", error);
+          setErrorMessage(
+            "User already exists. Please try to login with your credentials."
+          );
+        } else {
+          console.log("Logged in user after signup attempt:", data.user);
+          localStorage.setItem(
+            "supabase.auth.token",
+            JSON.stringify(data.session)
+          );
+          setSuccessMessage(`Welcome back, ${data.user.email}!`);
+          navigate("/");
+        }
       } else {
-        console.log("Signed up user:", data.user);
-        setSuccessMessage(
-          "Sign up successful! Please check your email for verification."
-        );
+        // Otherwise, proceed to signup
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+
+        if (error) {
+          console.error("Sign up error:", error);
+          setErrorMessage(error.message);
+        } else {
+          console.log("Signed up user:", data.user);
+          setSuccessMessage(
+            "Sign up successful! Please check your email for verification."
+          );
+        }
       }
     }
 
+    setLoading(false);
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+    });
+
+    if (error) {
+      console.error("Google login error:", error);
+      setErrorMessage("Failed to login with Google. Please try again.");
+    } else {
+      console.log("Google OAuth login initiated:", data);
+    }
     setLoading(false);
   };
 
@@ -94,6 +140,14 @@ export default function Auth() {
             : "Sign Up"}
         </button>
       </form>
+
+      <button
+        onClick={handleGoogleLogin}
+        disabled={loading}
+        className='mt-4 p-3 bg-red-500 text-white rounded hover:bg-red-600 transition w-full'
+      >
+        {loading ? "Processing..." : "Login with Google"}
+      </button>
 
       {errorMessage && (
         <p className='mt-4 text-center text-red-600'>{errorMessage}</p>

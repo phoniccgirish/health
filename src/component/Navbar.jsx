@@ -1,159 +1,123 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 
-export default function Navbar() {
-  const [open, setOpen] = useState(false);
-  const [user, setUser] = useState(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-      }
-    );
-
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    localStorage.removeItem("supabase.auth.token");
-    setUser(null);
-    navigate("/login");
-  };
+const Navbar = () => {
+  // Fake login state (replace with real auth)
+  const [user, setUser] = useState({
+    loggedIn: true,
+    name: "Girish Yadav",
+    email: "g@gmail.com",
+    avatar: "https://i.pravatar.cc/150?img=32", // random avatar
+  });
 
   return (
-    <>
-      <nav className='fixed top-0 left-0 right-0 h-16 bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-600 text-white flex items-center justify-between px-6 shadow-lg backdrop-blur-lg z-50'>
-        <Link
-          to='/'
-          className='text-2xl font-extrabold tracking-wide cursor-pointer'
-        >
-          Heathchef
-        </Link>
+    <nav className='bg-gradient-to-r from-gray-800 via-gray-700 to-gray-900 shadow-lg'>
+      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+        <div className='flex items-center justify-between h-16'>
+          {/* Logo */}
+          <div className='flex-shrink-0'>
+            <h1 className='text-2xl font-bold text-gray-200'>Healthchef</h1>
+          </div>
 
-        {/* Desktop Links */}
-        <div className='hidden md:flex items-center space-x-6 font-medium'>
-          <Link to='/' className='hover:text-yellow-300 transition'>
-            Home
-          </Link>
-          <Link to='/about' className='hover:text-yellow-300 transition'>
-            About
-          </Link>
-          <Link to='/contact' className='hover:text-yellow-300 transition'>
-            Contact
-          </Link>
-          <Link to='/body' className='hover:text-yellow-300 transition'>
-            3D View
-          </Link>
-
-          {user ? (
-            <>
-              <span className='flex items-center space-x-2'>
-                <img
-                  src='https://via.placeholder.com/32'
-                  alt='Profile'
-                  className='rounded-full'
-                />
-                <span>{user.email}</span>
-              </span>
-
-              <button
-                onClick={handleLogout}
-                className='bg-red-500 px-3 py-1 rounded hover:bg-red-600'
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <Link to='/auth' className='hover:text-yellow-300 transition'>
-              Login / Sign Up
-            </Link>
-          )}
-        </div>
-
-        {/* Mobile Menu Button */}
-        <button
-          className='md:hidden flex flex-col space-y-1 focus:outline-none'
-          onClick={() => setOpen(!open)}
-        >
-          <span className='w-6 h-0.5 bg-white'></span>
-          <span className='w-6 h-0.5 bg-white'></span>
-          <span className='w-6 h-0.5 bg-white'></span>
-        </button>
-      </nav>
-
-      {/* Mobile Menu */}
-      {open && (
-        <div className='md:hidden absolute top-16 left-0 right-0 bg-gray-900 bg-opacity-95 text-white flex flex-col items-center py-6 space-y-6 z-40'>
-          <Link
-            to='/'
-            onClick={() => setOpen(false)}
-            className='hover:text-yellow-300'
-          >
-            Home
-          </Link>
-          <Link
-            to='/about'
-            onClick={() => setOpen(false)}
-            className='hover:text-yellow-300'
-          >
-            About
-          </Link>
-          <Link
-            to='/contact'
-            onClick={() => setOpen(false)}
-            className='hover:text-yellow-300'
-          >
-            Contact
-          </Link>
-          <Link
-            to='/body'
-            onClick={() => setOpen(false)}
-            className='hover:text-yellow-300'
-          >
-            3D View
-          </Link>
-
-          {user ? (
-            <>
-              <span className='text-center'>
-                <img
-                  src='https://via.placeholder.com/32'
-                  alt='Profile'
-                  className='rounded-full mx-auto'
-                />
-                <div className='mt-2'>{user.email}</div>
-              </span>
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setOpen(false);
-                }}
-                className='bg-red-500 px-4 py-1 rounded hover:bg-red-600'
-              >
-                Logout
-              </button>
-            </>
-          ) : (
+          {/* Menu */}
+          <div className='hidden md:flex space-x-6'>
             <Link
-              to='/auth'
-              onClick={() => setOpen(false)}
-              className='hover:text-yellow-300'
+              to='/'
+              className='text-gray-300 hover:text-teal-400 transition-colors duration-300 font-medium'
             >
-              Login / Sign Up
+              Home
             </Link>
-          )}
+            <Link
+              to='/about'
+              className='text-gray-300 hover:text-teal-400 transition-colors duration-300 font-medium'
+            >
+              About
+            </Link>
+            <Link
+              to='/body'
+              className='text-gray-300 hover:text-teal-400 transition-colors duration-300 font-medium'
+            >
+              3D Body
+            </Link>
+            <Link
+              to='/contact'
+              className='text-gray-300 hover:text-teal-400 transition-colors duration-300 font-medium'
+            >
+              Contact
+            </Link>
+
+            {/* Show Login OR Profile */}
+            {!user.loggedIn ? (
+              <Link
+                to='/auth'
+                className='text-gray-300 hover:text-teal-400 transition-colors duration-300 font-medium'
+              >
+                Login
+              </Link>
+            ) : (
+              <div className='relative group'>
+                <img
+                  src={user.avatar}
+                  alt='Profile'
+                  className='w-10 h-10 rounded-full cursor-pointer border-2 border-teal-400'
+                />
+
+                {/* Hover Card */}
+                <div className='absolute right-0 mt-2 w-60 bg-gray-800 text-gray-200 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4'>
+                  <div className='flex items-center space-x-4'>
+                    <img
+                      src={user.avatar}
+                      alt='Profile'
+                      className='w-12 h-12 rounded-full border-2 border-teal-400'
+                    />
+                    <div>
+                      <h2 className='text-lg font-semibold'>{user.name}</h2>
+                      <p className='text-sm text-gray-400'>{user.email}</p>
+                    </div>
+                  </div>
+                  <div className='mt-4'>
+                    <button
+                      onClick={() => setUser({ loggedIn: false })}
+                      className='w-full bg-red-500 hover:bg-red-600 text-white py-2 px-3 rounded-lg font-medium transition'
+                    >
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Button */}
+          <div className='hidden md:flex'>
+            <button className='bg-teal-500 hover:bg-teal-600 text-gray-900 font-semibold px-4 py-2 rounded-lg shadow-md transition duration-300'>
+              M-METAL Ai
+            </button>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <div className='md:hidden flex items-center'>
+            <button className='text-gray-300 hover:text-teal-400 focus:outline-none'>
+              <svg
+                className='w-6 h-6'
+                fill='none'
+                stroke='currentColor'
+                viewBox='0 0 24 24'
+                xmlns='http://www.w3.org/2000/svg'
+              >
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M4 6h16M4 12h16M4 18h16'
+                />
+              </svg>
+            </button>
+          </div>
         </div>
-      )}
-    </>
+      </div>
+    </nav>
   );
-}
+};
+
+export default Navbar;

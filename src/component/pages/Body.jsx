@@ -2,7 +2,7 @@ import React, { Suspense, useState } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { useGLTF, Bounds, OrbitControls } from "@react-three/drei";
 
-// Load and render the GLTF model
+// Model Component
 function Model({ path }) {
   const { scene } = useGLTF(path);
   return (
@@ -12,10 +12,9 @@ function Model({ path }) {
   );
 }
 
-// Track camera rotation to switch front/back view
+// View Tracker Component
 function ViewTracker({ setView }) {
   const { camera } = useThree();
-
   useFrame(() => {
     const angle = Math.atan2(camera.position.x, camera.position.z);
     const normalized = angle % (2 * Math.PI);
@@ -38,24 +37,34 @@ function ViewTracker({ setView }) {
   );
 }
 
-// Reusable button component
-function BodyPartButton({ label, onClick }) {
+// Button Component
+function BodyPartButton({ label, onClick, disabled }) {
   return (
     <button
       onClick={onClick}
-      className='bg-red-600 text-white font-bold px-6 py-2 shadow-md rounded w-40'
+      disabled={disabled}
+      className='bg-red-600 text-white font-bold px-6 py-2 shadow-md rounded w-40 disabled:opacity-50'
     >
       {label}
     </button>
   );
 }
 
-// Main component
-export default function Body() {
+// Main Component
+export default function Body1() {
   const [view, setView] = useState("front");
+  const [exercise, setExercise] = useState("");
+  const [doingExercise, setDoingExercise] = useState(false);
 
   const handleBodyPartClick = (part) => {
-    alert(`Selected: ${part}`);
+    setExercise(part);
+    setDoingExercise(true);
+
+    // Automatically stop after 10 seconds
+    setTimeout(() => {
+      setDoingExercise(false);
+      alert(`${part} exercise completed!`);
+    }, 10000);
   };
 
   return (
@@ -79,39 +88,62 @@ export default function Body() {
         </Canvas>
       </div>
 
-      {/* FRONT VIEW BUTTONS */}
-      {view === "front" && (
+      {/* Exercise Animation Display */}
+      {doingExercise && (
+        <motion.div
+          className='mt-6 p-4 bg-green-300 rounded shadow-lg'
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className='text-xl font-bold'>Doing: {exercise}</h2>
+          <p>Exercise in progress... ⏳</p>
+          <motion.div
+            className='w-full bg-gray-200 rounded h-4 mt-2'
+            initial={{ width: "0%" }}
+            animate={{ width: "100%" }}
+            transition={{ duration: 10, ease: "linear" }}
+          />
+        </motion.div>
+      )}
+
+      {/* Front View Buttons */}
+      {!doingExercise && view === "front" && (
         <div className='flex flex-col items-center space-y-4 mt-6'>
           <BodyPartButton
             label='Chest'
-            onClick={() => handleBodyPartClick("Chest - Bench Press, Push-Ups")}
+            onClick={() =>
+              handleBodyPartClick("Chest - Push-ups for 10 seconds")
+            }
           />
           <BodyPartButton
             label='Abs'
-            onClick={() => handleBodyPartClick("Abs - Crunches, Plank")}
+            onClick={() => handleBodyPartClick("Abs - Crunches for 10 seconds")}
           />
           <BodyPartButton
             label='Quads'
-            onClick={() => handleBodyPartClick("Quads - Squats, Lunges")}
+            onClick={() => handleBodyPartClick("Quads - Squats for 10 seconds")}
           />
         </div>
       )}
 
-      {/* BACK VIEW BUTTONS */}
-      {view === "back" && (
+      {/* Back View Buttons */}
+      {!doingExercise && view === "back" && (
         <div className='flex flex-col items-center space-y-4 mt-6'>
           <BodyPartButton
             label='Head'
-            onClick={() => handleBodyPartClick("Head - Neck stretches")}
+            onClick={() =>
+              handleBodyPartClick("Head - Neck stretches for 10 seconds")
+            }
           />
           <BodyPartButton
             label='Back'
-            onClick={() => handleBodyPartClick("Back - Pull-ups, Rows")}
+            onClick={() => handleBodyPartClick("Back - Rows for 10 seconds")}
           />
           <BodyPartButton
             label='Glutes'
             onClick={() =>
-              handleBodyPartClick("Glutes - Hip Thrusts, Glute Bridge")
+              handleBodyPartClick("Glutes - Hip Thrusts for 10 seconds")
             }
           />
         </div>
