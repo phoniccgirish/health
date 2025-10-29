@@ -1,26 +1,48 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
 
 const Navbar = () => {
-  // Fake login state (replace with real auth)
-  const [user, setUser] = useState({
-    loggedIn: true,
-    name: "Girish Yadav",
-    email: "g@gmail.com",
-    avatar: "https://i.pravatar.cc/150?img=32", // random avatar
-  });
+  const [session, setSession] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsMobileMenuOpen(false);
+  };
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+  const userEmail = session?.user?.email;
+  const userAvatar =
+    session?.user?.user_metadata?.avatar_url ||
+    `https://api.dicebear.com/7.x/initials/svg?seed=${userEmail || "user"}`;
+  const userName =
+    session?.user?.user_metadata?.full_name || userEmail?.split("@")[0];
 
   return (
-    <nav className='bg-gradient-to-r from-gray-800 via-gray-700 to-gray-900 shadow-lg'>
+    <nav className='bg-gray-900 shadow-lg relative z-20'>
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         <div className='flex items-center justify-between h-16'>
-          {/* Logo */}
           <div className='flex-shrink-0'>
-            <h1 className='text-2xl font-bold text-gray-200'>Healthchef</h1>
+            <Link to='/' className='text-2xl font-bold text-gray-200'>
+              Healthchef
+            </Link>
           </div>
-
-          {/* Menu */}
-          <div className='hidden md:flex space-x-6'>
+          <div className='hidden md:flex items-center space-x-6'>
             <Link
               to='/'
               className='text-gray-300 hover:text-teal-400 transition-colors duration-300 font-medium'
@@ -40,14 +62,17 @@ const Navbar = () => {
               3D Body
             </Link>
             <Link
-              to='/contact'
+              to='/bodyanalysis'
               className='text-gray-300 hover:text-teal-400 transition-colors duration-300 font-medium'
             >
-              Contact
+              Bodyanalysis
             </Link>
 
-            {/* Show Login OR Profile */}
-            {!user.loggedIn ? (
+            <Link to='/ai'><button className='bg-teal-500 hover:bg-teal-600 text-gray-900 font-semibold px-4 py-2 rounded-lg shadow-md transition duration-300'>
+              Ai Health
+            </button></Link>
+
+            {!session ? (
               <Link
                 to='/auth'
                 className='text-gray-300 hover:text-teal-400 transition-colors duration-300 font-medium'
@@ -57,27 +82,26 @@ const Navbar = () => {
             ) : (
               <div className='relative group'>
                 <img
-                  src={user.avatar}
+                  src={userAvatar}
                   alt='Profile'
-                  className='w-10 h-10 rounded-full cursor-pointer border-2 border-teal-400'
+                  className='w-10 h-10 rounded-full cursor-pointer border-2 border-teal-400 bg-gray-600'
                 />
 
-                {/* Hover Card */}
-                <div className='absolute right-0 mt-2 w-60 bg-gray-800 text-gray-200 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4'>
+                <div className='absolute right-0 mt-2 w-64 bg-gray-800 text-gray-200 rounded-lg shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 p-4 transform translate-y-2 group-hover:translate-y-0'>
                   <div className='flex items-center space-x-4'>
                     <img
-                      src={user.avatar}
+                      src={userAvatar}
                       alt='Profile'
-                      className='w-12 h-12 rounded-full border-2 border-teal-400'
+                      className='w-12 h-12 rounded-full border-2 border-teal-400 bg-gray-600'
                     />
                     <div>
-                      <h2 className='text-lg font-semibold'>{user.name}</h2>
-                      <p className='text-sm text-gray-400'>{user.email}</p>
+                      <h2 className='text-lg font-semibold'>{userName}</h2>
+                      <p className='text-sm text-gray-400'>{userEmail}</p>
                     </div>
                   </div>
                   <div className='mt-4'>
                     <button
-                      onClick={() => setUser({ loggedIn: false })}
+                      onClick={handleLogout}
                       className='w-full bg-red-500 hover:bg-red-600 text-white py-2 px-3 rounded-lg font-medium transition'
                     >
                       Logout
@@ -88,31 +112,113 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Button */}
-          <div className='hidden md:flex'>
-            <button className='bg-teal-500 hover:bg-teal-600 text-gray-900 font-semibold px-4 py-2 rounded-lg shadow-md transition duration-300'>
-              M-METAL Ai
+          <div className='md:hidden flex items-center'>
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className='text-gray-300 hover:text-teal-400 focus:outline-none'
+            >
+              {isMobileMenuOpen ? (
+                <svg
+                  className='w-6 h-6'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                  xmlns='http://www.w3.org/2000/svg'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M6 18L18 6M6 6l12 12'
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className='w-6 h-6'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                  xmlns='http://www.w3.org/2000/svg'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M4 6h16M4 12h16M4 18h16'
+                  />
+                </svg>
+              )}
             </button>
           </div>
+        </div>
+      </div>
 
-          {/* Mobile Menu Button */}
-          <div className='md:hidden flex items-center'>
-            <button className='text-gray-300 hover:text-teal-400 focus:outline-none'>
-              <svg
-                className='w-6 h-6'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-                xmlns='http://www.w3.org/2000/svg'
+      <div
+        className={`md:hidden absolute w-full bg-gray-800 shadow-lg ${
+          isMobileMenuOpen ? "block" : "hidden"
+        }`}
+      >
+        <div className='pt-2 pb-4 space-y-1 px-2 sm:px-3'>
+          <Link
+            to='/'
+            onClick={closeMobileMenu}
+            className='block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-teal-400 hover:bg-gray-700'
+          >
+            Home
+          </Link>
+          <Link
+            to='/body'
+            onClick={closeMobileMenu}
+            className='block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-teal-400 hover:bg-gray-700'
+          >
+            3D Body
+          </Link>
+          <Link
+            to='/bodyanalysis'
+            onClick={closeMobileMenu}
+            className='block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-teal-400 hover:bg-gray-700'
+          >
+            Bodyanalysis
+          </Link>
+
+          <button className='w-full text-left bg-teal-500 hover:bg-teal-600 text-gray-900 font-semibold px-3 py-2 mt-2 rounded-lg shadow-md transition duration-300'>
+            M-METAL Ai
+          </button>
+
+          <div className='pt-4 pb-3 border-t border-gray-700 mt-4'>
+            {!session ? (
+              <Link
+                to='/auth'
+                onClick={closeMobileMenu}
+                className='block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-teal-400 hover:bg-gray-700'
               >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M4 6h16M4 12h16M4 18h16'
-                />
-              </svg>
-            </button>
+                Login
+              </Link>
+            ) : (
+              <div className='px-3'>
+                <div className='flex items-center space-x-4 mb-3'>
+                  <img
+                    src={userAvatar}
+                    alt='Profile'
+                    className='w-10 h-10 rounded-full border-2 border-teal-400 bg-gray-600'
+                  />
+                  <div>
+                    <h2 className='text-base font-semibold text-gray-200'>
+                      {userName}
+                    </h2>
+                    <p className='text-sm font-medium text-gray-400'>
+                      {userEmail}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className='w-full bg-red-500 hover:bg-red-600 text-white py-2 px-3 rounded-lg font-medium transition'
+                >
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

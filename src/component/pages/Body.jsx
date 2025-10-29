@@ -1,153 +1,144 @@
-import React, { Suspense, useState } from "react";
-import { Canvas, useThree, useFrame } from "@react-three/fiber";
-import { useGLTF, Bounds, OrbitControls } from "@react-three/drei";
+import React, { useState, useEffect, useCallback } from "react";
+import CanvasViewer from "../CanvasViewer";
+import ExerciseButtons from "../ExerciseButtons";
+import PopupModal from "../PopupModal";
+// --- UserInfo import is GONE ---
+import axios from "axios";
 
-// Model Component
-function Model({ path }) {
-  const { scene } = useGLTF(path);
-  return (
-    <group scale={[0.6, 0.6, 0.6]} position={[0, -1, 0]}>
-      <primitive object={scene} />
-    </group>
-  );
-}
-
-// View Tracker Component
-function ViewTracker({ setView }) {
-  const { camera } = useThree();
-  useFrame(() => {
-    const angle = Math.atan2(camera.position.x, camera.position.z);
-    const normalized = angle % (2 * Math.PI);
-
-    if (Math.abs(normalized) < 0.3) {
-      setView("front");
-    } else if (Math.abs(Math.abs(normalized) - Math.PI) < 0.3) {
-      setView("back");
-    }
+function Body() {
+  const [view, setView] = useState("main");
+  const [selectedExercise, setSelectedExercise] = useState(null);
+  const [popup, setPopup] = useState({
+    visible: false,
+    title: "",
+    message: "",
   });
+  const [userUID] = useState("anonymous-uid-123456");
+  const [history, setHistory] = useState([]);
 
-  return (
-    <OrbitControls
-      enableZoom={true}
-      enablePan={false}
-      minPolarAngle={Math.PI / 2}
-      maxPolarAngle={Math.PI / 2}
-      target={[0, 1, 0]}
-    />
-  );
-}
+  const showPopup = (title, message) =>
+    setPopup({ visible: true, title, message });
+  const closePopup = () => setPopup({ visible: false, title: "", message: "" });
 
-// Button Component
-function BodyPartButton({ label, onClick, disabled }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className='bg-red-600 text-white font-bold px-6 py-2 shadow-md rounded w-40 disabled:opacity-50'
-    >
-      {label}
-    </button>
-  );
-}
+  const fetchHistory = useCallback(async () => {
+    if (!userUID) return;
+    try {
+      const res = await axios.get(`http://localhost:8000/history/${userUID}/`);
+      // setHistory(res.data.history);
+      // This is the NEW, FIXED line:
+      setHistory(res.data);
+    } catch (error) {
+      console.error("Failed to fetch history:", error);
+      showPopup("History Error", "Could not load exercise history.");
+    }
+  }, [userUID]);
 
-// Main Component
-export default function Body1() {
-  const [view, setView] = useState("front");
-  const [exercise, setExercise] = useState("");
-  const [doingExercise, setDoingExercise] = useState(false);
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
 
-  const handleBodyPartClick = (part) => {
-    setExercise(part);
-    setDoingExercise(true);
+  const handleExerciseSelect = (exercise) => {
+    setSelectedExercise(exercise);
+    setView("detail");
+    window.speechSynthesis.speak(
+      new SpeechSynthesisUtterance(exercise.description)
+    );
+  };
 
-    // Automatically stop after 10 seconds
-    setTimeout(() => {
-      setDoingExercise(false);
-      alert(`${part} exercise completed!`);
-    }, 10000);
+  const handleCompleteExercise = async () => {
+    if (!selectedExercise) return;
+
+    const payload = {
+      user_id: userUID,
+      body_part: selectedExercise.bodyPart,
+      exercise: selectedExercise.label,
+    };
+    // Note: Your backend (models.py) is already handling the timestamp automatically.
+    // No need to send it from the frontend.
+
+    try {
+      await axios.post("http://localhost:8000/track-exercise/", payload);
+      showPopup("Success!", "Exercise logged successfully.");
+      setView("main");
+      setSelectedExercise(null);
+      fetchHistory(); // Refresh history after logging
+    } catch (error) {
+      console.error("Failed to log exercise:", error);
+      showPopup("Error", "Failed to log exercise. Please try again.");
+    }
   };
 
   return (
-    <div className='w-full h-screen pt-16 flex flex-col items-center justify-center'>
-      {/* 3D MODEL VIEWER */}
-      <div className='w-[400px] h-[500px] border rounded-xl shadow-lg flex items-center justify-center'>
-        <Canvas
-          style={{ background: "white" }}
-          camera={{ position: [0, 2, 6], fov: 45 }}
-        >
-          <ambientLight intensity={1} />
-          <directionalLight position={[5, 5, 5]} intensity={1} />
+    <div className='min-h-screen bg-gray-900 text-white font-sans p-4 flex flex-col items-center'>
+      <div className='max-w-5xl w-full bg-gray-800 rounded-2xl shadow-lg p-6'>
+        {view === "main" && (
+          <>
+            <h1 className='text-4xl font-black mb-4 text-center text-gradient bg-gradient-to-r from-blue-400 to-emerald-400'>
+              Targeted Fitness
+            </h1>
+            <CanvasViewer mode='main' />
+            <ExerciseButtons onExerciseSelect={handleExerciseSelect} />
 
-          <Suspense fallback={null}>
-            <Bounds fit clip observe margin={1.6}>
-              <Model path='/model.gltf' />
-            </Bounds>
-          </Suspense>
+            {/* Exercise History Section */}
+            <section className='mt-6'>
+              <h2 className='text-2xl font-semibold mb-4'>Exercise History</h2>
+              <div className='bg-gray-700 p-4 rounded shadow max-h-60 overflow-y-auto'>
+                {history.length === 0 ? (
+                  <p>No exercise history found.</p>
+                ) : (
+                  <ul className='list-disc ml-6 space-y-2'>
+                    {history.map((item) => (
+                      <li key={item.id}>
+                        <span className='font-semibold'>
+                          {new Date(item.timestamp).toLocaleString()}:
+                        </span>{" "}
+                        {item.body_part} - {item.exercise}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </section>
+          </>
+        )}
 
-          <ViewTracker setView={setView} />
-        </Canvas>
+        {view === "detail" && selectedExercise && (
+          <div className='flex flex-col items-center'>
+            <button
+              className='text-blue-400 hover:text-blue-300 mb-4 self-start'
+              onClick={() => setView("main")}
+            >
+              ← Back to Overview
+            </button>
+
+            <h2 className='text-3xl font-bold mb-2'>
+              {selectedExercise.label}
+            </h2>
+            <p className='mb-6 text-gray-300'>{selectedExercise.description}</p>
+
+            <CanvasViewer mode='detail' exercise={selectedExercise} />
+
+            <button
+              className='bg-green-500 hover:bg-green-600 text-gray-900 font-bold rounded-full px-6 py-3 mt-4 transition-colors'
+              onClick={handleCompleteExercise}
+            >
+              Complete Exercise
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Exercise Animation Display */}
-      {doingExercise && (
-        <motion.div
-          className='mt-6 p-4 bg-green-300 rounded shadow-lg'
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h2 className='text-xl font-bold'>Doing: {exercise}</h2>
-          <p>Exercise in progress... ⏳</p>
-          <motion.div
-            className='w-full bg-gray-200 rounded h-4 mt-2'
-            initial={{ width: "0%" }}
-            animate={{ width: "100%" }}
-            transition={{ duration: 10, ease: "linear" }}
-          />
-        </motion.div>
-      )}
+      {/* --- UserInfo component tag is GONE --- */}
 
-      {/* Front View Buttons */}
-      {!doingExercise && view === "front" && (
-        <div className='flex flex-col items-center space-y-4 mt-6'>
-          <BodyPartButton
-            label='Chest'
-            onClick={() =>
-              handleBodyPartClick("Chest - Push-ups for 10 seconds")
-            }
-          />
-          <BodyPartButton
-            label='Abs'
-            onClick={() => handleBodyPartClick("Abs - Crunches for 10 seconds")}
-          />
-          <BodyPartButton
-            label='Quads'
-            onClick={() => handleBodyPartClick("Quads - Squats for 10 seconds")}
-          />
-        </div>
-      )}
-
-      {/* Back View Buttons */}
-      {!doingExercise && view === "back" && (
-        <div className='flex flex-col items-center space-y-4 mt-6'>
-          <BodyPartButton
-            label='Head'
-            onClick={() =>
-              handleBodyPartClick("Head - Neck stretches for 10 seconds")
-            }
-          />
-          <BodyPartButton
-            label='Back'
-            onClick={() => handleBodyPartClick("Back - Rows for 10 seconds")}
-          />
-          <BodyPartButton
-            label='Glutes'
-            onClick={() =>
-              handleBodyPartClick("Glutes - Hip Thrusts for 10 seconds")
-            }
-          />
-        </div>
+      {popup.visible && (
+        <PopupModal
+          title={popup.title}
+          message={popup.message}
+          onClose={closePopup}
+        />
       )}
     </div>
   );
 }
+
+export default Body;

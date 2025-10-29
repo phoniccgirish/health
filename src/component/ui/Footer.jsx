@@ -33,13 +33,13 @@ const Footer = () => {
               </a>
             </li>
             <li>
-              <a href='/services' className='hover:text-white'>
-                Services
+              <a href='/ai' className='hover:text-white'>
+                Chatbot
               </a>
             </li>
             <li>
-              <a href='/contact' className='hover:text-white'>
-                Contact
+              <a href='/bodyanalysis' className='hover:text-white'>
+                Bodyanalysis
               </a>
             </li>
           </ul>
@@ -67,7 +67,7 @@ const Footer = () => {
 
       {/* Bottom */}
       <div className='border-t border-gray-700 mt-8 pt-4 text-center text-sm'>
-        © {new Date().getFullYear()} YourBrand. All rights reserved.
+        © {new Date().getFullYear()} Healthcef. All rights reserved.
       </div>
     </footer>
   );

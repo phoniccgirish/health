@@ -4,6 +4,7 @@ import { OrbitControls } from "@react-three/drei";
 import Model from "./Model";
 import BodyPartButton from "../ui/BodyPartButton";
 import ViewTracker from "../ui/ViewTracker";
+import { Group } from "three";
 
 export default function Body() {
   const [view, setView] = useState("front");
@@ -28,14 +29,17 @@ export default function Body() {
       <div className='w-[400px] h-[500px] border rounded-xl shadow-lg flex items-center justify-center'>
         <Canvas
           style={{ background: "#222" }}
-          camera={{ position: [0, 2, 6], fov: 45 }}
+          camera={{ position: [0, 1.5, 3], fov: 45 }}
         >
           <ambientLight intensity={0.5} />
           <directionalLight position={[5, 5, 5]} intensity={1} />
           <pointLight position={[-5, 5, 5]} intensity={0.8} />
 
           <Suspense fallback={null}>
-            <Model path='/model.gltf' blinkPart={blinkPart} />
+            {/* Wrap the model in a group to keep it centered */}
+            <group position={[0, -1, 0]}>
+              <Model path='/model.gltf' blinkPart={blinkPart} />
+            </group>
           </Suspense>
 
           <ViewTracker setView={setView} />
@@ -44,7 +48,7 @@ export default function Body() {
             enablePan={false}
             minPolarAngle={Math.PI / 2}
             maxPolarAngle={Math.PI / 2}
-            target={[0, 1, 0]}
+            target={[0, 0, 0]}
           />
         </Canvas>
       </div>
